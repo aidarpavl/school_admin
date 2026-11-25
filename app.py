@@ -3,7 +3,8 @@
 """
 import streamlit as st
 
-from core.auth import bootstrap_admin, finish_reset, get_user, login, register, start_reset
+from core.auth import (bootstrap_admin, create_admin, finish_reset, get_user, has_admin, login, register,
+                       start_reset)
 from core.config import ADMIN_ROLES, APP_TITLE, LINKS, role_name
 from core.db import get_db
 from core.ui import external_app, is_super
@@ -21,7 +22,31 @@ db = get_db()
 bootstrap_admin(db)
 
 
+def setup_screen():
+    """Базада бірде-бір бас әкімші жоқ кезде ғана шығады (алғашқы іске қосу)."""
+    st.title("🏫 " + APP_TITLE)
+    st.warning("Бас әкімші әлі құрылмаған. Алғашқы баптау: бас әкімшінің логині мен құпиясөзін енгізіңіз.")
+    with st.form("setup_admin"):
+        un = st.text_input("Логин", "Aidar")
+        pw = st.text_input("Құпиясөз (≥6)", type="password")
+        pw2 = st.text_input("Құпиясөзді қайталаңыз", type="password")
+        em = st.text_input("Email (құпиясөзді қалпына келтіру үшін)")
+        if st.form_submit_button("Бас әкімшіні құру", type="primary"):
+            if len(pw.strip()) < 6 or pw.strip() != pw2.strip() or len(un.strip()) < 3:
+                st.error("Логин ≥3 таңба, құпиясөз ≥6 таңба және екеуі бірдей болуы керек")
+            elif has_admin(db):
+                st.error("Бас әкімші бар. Кіру бетін пайдаланыңыз.")
+            else:
+                create_admin(db, un, pw, em)
+                st.session_state["user"] = get_user(db, un.strip())
+                st.success("Бас әкімші құрылды")
+                st.rerun()
+
+
 def auth_screen():
+    if not has_admin(db):
+        setup_screen()
+        return
     st.title("🏫 " + APP_TITLE)
     st.caption("Дарынды балаларға арналған мектеп · әкімшілік, мұғалімдер, мамандар")
     t1, t2, t3 = st.tabs(["🔐 Кіру", "📝 Тіркелу", "❓ Құпиясөзді ұмыттым"])

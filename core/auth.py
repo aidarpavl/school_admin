@@ -33,20 +33,36 @@ def get_user(db: DB, username: str) -> dict | None:
     return rows[0] if rows else None
 
 
-def bootstrap_admin(db: DB):
-    """Бас админді секреттерден құрады (ADMIN_USERNAME / ADMIN_PASSWORD).
-    Құпиясөз кодта сақталмайды — тек Streamlit Secrets ішінде."""
-    username = get_secret("ADMIN_USERNAME", "Aidar")
-    password = get_secret("ADMIN_PASSWORD")
-    email = get_secret("ADMIN_EMAIL", "")
-    if not password:
-        return
-    if get_user(db, username) is None:
+def has_admin(db: DB) -> bool:
+    return bool(db.query("SELECT id FROM users WHERE role = 'admin' AND active = 1"))
+
+
+def create_admin(db: DB, username: str, password: str, email: str = "", full_name: str = "Бас администратор"):
+    username, password = username.strip(), password.strip()
+    u = get_user(db, username)
+    if u is None:
         db.insert("users", {
             "username": username, "password_hash": hash_password(password),
-            "full_name": "Бас администратор", "email": email, "role": "admin",
+            "full_name": full_name, "email": email, "role": "admin",
             "position": "Бас администратор", "active": 1, "created_at": now(),
         })
+    else:  # бар болса — админ етіп, құпиясөзін жаңартып, бұғаттан шығару
+        db.execute("UPDATE users SET password_hash = ?, role = 'admin', active = 1 WHERE id = ?",
+                   (hash_password(password), u["id"]))
+
+
+def bootstrap_admin(db: DB):
+    """Secrets-те ADMIN_PASSWORD болса — бас админді құрады немесе құпиясөзін Secrets-пен теңестіреді.
+    Secrets жоқ болса — кіру бетінде «Бас әкімшіні құру» формасы шығады (тек әкімші жоқ кезде)."""
+    username = str(get_secret("ADMIN_USERNAME", "Aidar")).strip()
+    password = get_secret("ADMIN_PASSWORD")
+    if not password:
+        return
+    password = str(password).strip()
+    force = str(get_secret("ADMIN_RESET", "")).lower() in ("1", "true", "yes", "иә")
+    if get_user(db, username) is None or force:
+        # ADMIN_RESET = true → құпиясөз Secrets-тегі мәнге қайтарылады (ұмытып қалсаңыз)
+        create_admin(db, username, password, str(get_secret("ADMIN_EMAIL", "")))
 
 
 def register(db: DB, username: str, password: str, full_name: str, email: str,
@@ -70,8 +86,12 @@ def register(db: DB, username: str, password: str, full_name: str, email: str,
 
 def login(db: DB, username: str, password: str) -> dict | None:
     u = get_user(db, username)
-    if u and int(u.get("active") or 0) == 1 and verify_password(password, u["password_hash"]):
-        return u
+    if not u or int(u.get("active") or 0) != 1:
+        return None
+    # көшіргенде қосылып кететін бос орындарды ескеру
+    for pw in (password, password.strip()):
+        if verify_password(pw, u["password_hash"]):
+            return u
     return None
 
 
