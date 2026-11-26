@@ -8,7 +8,7 @@ from core.auth import (bootstrap_admin, create_admin, finish_reset, get_user, ha
 from core.config import ADMIN_ROLES, APP_TITLE, LINKS, role_name
 from core.db import get_db
 from core.ui import external_app, is_super
-from views import admin_pages, archive, docflow, feedback, mdj, observation, rating, tasks, workspaces
+from views import admin_pages, archive, docflow, feedback, mdj, observation, rating, tasks, uch, workspaces
 
 st.set_page_config(page_title=APP_TITLE, page_icon="🏫", layout="wide")
 st.markdown("""<style>
@@ -110,6 +110,7 @@ MENU = [("🏠 Басты бет", lambda: admin_pages.home(db, user), True),
         ("📂 Құжат айналымы", lambda: docflow.render(db, user), True),
         ("🗄 Электрондық мұрағат", lambda: archive.render(db, user), True),
         ("💬 Ұсыныстар мен пікірлер", lambda: feedback.render(db, user), True),
+        ("📚 Оқу ісі (завуч)", lambda: uch.render(db, user), role in ADMIN_ROLES),
         ("🧰 Менің жұмыс орным", lambda: workspaces.render(db, user), role in workspaces.WORKSPACES),
         ("🧭 Барлық жұмыс орындары", None, is_super(user)),
         ("📘 Өзара сабаққа қатысу (жас педагог)", lambda: observation.young_journal(db, user), True),
