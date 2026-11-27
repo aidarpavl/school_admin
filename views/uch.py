@@ -12,7 +12,7 @@ from core.config import ROLES, role_name
 from core.db import now
 from core.export import doc_bytes, esc
 from core.ui import download_buttons
-from views import observation
+from views import observation, pisa_view
 
 PERIODS = ["1 тоқсан", "2 тоқсан", "3 тоқсан", "4 тоқсан", "1 жартыжылдық", "2 жартыжылдық", "Жылдық"]
 PER_MAP = {"1 четверть": "1 тоқсан", "2 четверть": "2 тоқсан", "3 четверть": "3 тоқсан", "4 четверть": "4 тоқсан"}
@@ -543,10 +543,7 @@ def render(db, user):
     with t[1]:
         ent_module(db, user)
     with t[2]:
-        scored_module(db, user, "pisa", "PISA форматындағы функционалдық сауаттылық", PISA_AREAS, pisa_level,
-                      ["1-ден төмен", "1-деңгей"],
-                      "PISA тәрізді диагностика нәтижелері. Деңгейлер пайыз бойынша шартты түрде есептеледі; "
-                      "2-деңгей — базалық деңгей, одан төмені — тәуекел.")
+        pisa_view.render(db, user)
     with t[3]:
         progress_tab(db, user)
     with t[4]:
